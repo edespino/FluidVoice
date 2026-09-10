@@ -1,15 +1,15 @@
 # FluidVoice fork (edespino)
 
-This checkout is a fork of `altic-dev/FluidVoice` with one local branch for Hermes CLI dictation.
+This checkout is a fork of `altic-dev/FluidVoice` with two branches.
 
 - Fork: `https://github.com/edespino/FluidVoice`
 - Upstream: `https://github.com/altic-dev/FluidVoice`
 - Remotes: `origin` = fork, `upstream` = altic-dev
-- Branch on the fork: `local/spoken-send-terminals` only. Default branch is this one.
-- Local `main` tracks `upstream/main` for rebases. Do not push `main` to `origin`.
+- `main`: clean mirror of `upstream/main`. Default branch. Local `main` tracks `upstream/main`.
+- `local/spoken-send-terminals`: the Spoken Send terminal patch. Build this.
 
 Do not open a PR to altic-dev. Spoken Send Enter in a real shell can execute a command.
-Do not click GitHub "Sync fork". That merges upstream into this branch. Rebase locally instead.
+GitHub "Sync fork" is safe only onto `main`. Never sync into `local/spoken-send-terminals`.
 
 `AGENTS.md` is gitignored upstream. This file is the agent/operator note for the fork.
 
@@ -21,22 +21,19 @@ Change: always return `false`.
 
 Upstream blocks Terminal, iTerm, Warp, Ghostty, Kitty, Alacritty so Spoken Send cannot execute a shell command. This Debug build allows terminals so Hermes CLI can receive Enter. Same risk in a real shell.
 
-## Rebase
+## Sync main, then rebase the patch branch
 
 ```
 git fetch upstream
+git checkout main
+git merge --ff-only upstream/main
+git push origin main
 git checkout local/spoken-send-terminals
-git rebase upstream/main
-git push origin local/spoken-send-terminals
+git rebase main
+git push --force-with-lease origin local/spoken-send-terminals
 ```
 
 If `ContentView.swift` conflicts, keep `isSpokenSendBlockedApp` returning false.
-
-After rebase, force-with-lease if the branch was already pushed:
-
-```
-git push --force-with-lease origin local/spoken-send-terminals
-```
 
 ## Build and install
 
