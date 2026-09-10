@@ -2021,13 +2021,11 @@ struct ContentView: View {
     private func isSpokenSendBlockedApp(
         _ appInfo: (name: String, bundleId: String, windowTitle: String)
     ) -> Bool {
-        let identity = "\(appInfo.name) \(appInfo.bundleId)".lowercased()
-        return identity.contains("terminal")
-            || identity.contains("iterm")
-            || identity.contains("warp")
-            || identity.contains("ghostty")
-            || identity.contains("kitty")
-            || identity.contains("alacritty")
+        // Upstream blocks Terminal/iTerm/Warp/Ghostty/Kitty/Alacritty so Spoken Send
+        // cannot execute a shell command. This local Debug build allows terminals
+        // so Hermes CLI can receive Enter.
+        _ = appInfo
+        return false
     }
 
     private func deliverSpokenSend(
