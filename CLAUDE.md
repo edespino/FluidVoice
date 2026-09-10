@@ -5,10 +5,11 @@ This checkout is a fork of `altic-dev/FluidVoice` with one local branch for Herm
 - Fork: `https://github.com/edespino/FluidVoice`
 - Upstream: `https://github.com/altic-dev/FluidVoice`
 - Remotes: `origin` = fork, `upstream` = altic-dev
-- Branch to build: `local/spoken-send-terminals`
-- Keep `main` a clean mirror of `upstream/main`. Do not commit the patch there.
+- Branch on the fork: `local/spoken-send-terminals` only. Default branch is this one.
+- Local `main` tracks `upstream/main` for rebases. Do not push `main` to `origin`.
 
 Do not open a PR to altic-dev. Spoken Send Enter in a real shell can execute a command.
+Do not click GitHub "Sync fork". That merges upstream into this branch. Rebase locally instead.
 
 `AGENTS.md` is gitignored upstream. This file is the agent/operator note for the fork.
 
@@ -31,12 +32,10 @@ git push origin local/spoken-send-terminals
 
 If `ContentView.swift` conflicts, keep `isSpokenSendBlockedApp` returning false.
 
-Mirror main (optional):
+After rebase, force-with-lease if the branch was already pushed:
 
 ```
-git checkout main
-git merge --ff-only upstream/main
-git push origin main
+git push --force-with-lease origin local/spoken-send-terminals
 ```
 
 ## Build and install
