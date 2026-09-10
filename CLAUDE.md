@@ -24,16 +24,11 @@ Upstream blocks Terminal, iTerm, Warp, Ghostty, Kitty, Alacritty so Spoken Send 
 ## Sync main, then rebase the patch branch
 
 ```
-git fetch upstream
-git checkout main
-git merge --ff-only upstream/main
-git push origin main
-git checkout local/spoken-send-terminals
-git rebase main
-git push --force-with-lease origin local/spoken-send-terminals
+cd /Users/eespino/workspace/FluidVoice
+./sync-from-upstream.sh
 ```
 
-If `ContentView.swift` conflicts, keep `isSpokenSendBlockedApp` returning false.
+Fast-forwards `main` from `upstream/main`, pushes `origin/main`, rebases `local/spoken-send-terminals` onto `main`, force-with-lease pushes the patch branch. Aborts if the working tree is dirty. On conflict, keep `isSpokenSendBlockedApp` returning false, then `git rebase --continue` and `git push --force-with-lease origin local/spoken-send-terminals`.
 
 ## Build and install
 
