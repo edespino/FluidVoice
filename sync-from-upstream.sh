@@ -22,7 +22,9 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-git fetch upstream
+# Fetch only main: upstream has branches differing only by case (B/ vs b/),
+# which fail a full fetch on case-insensitive APFS and abort under set -e.
+git fetch upstream main
 git checkout main
 git merge --ff-only upstream/main
 git push origin main
