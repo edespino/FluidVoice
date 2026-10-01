@@ -75,13 +75,24 @@ Cask was removed with `brew uninstall --cask fluidvoice`. Restore with `brew ins
 ## Spoken Send (as configured)
 
 - Enabled. Phrase: `send it`. Key: Enter.
-- Send Immediately: off. Phrase still sends after the hotkey stops recording.
+- Send Immediately: on (since 2026-10-01). Hotkey mode: toggle (`HotkeyMode = toggle`).
+- With Send Immediately off, the phrase still sends after the hotkey stops recording.
 - Empty phrase does not mean always-Enter.
 - Speech model in Debug prefs: Parakeet TDT v2.
 - Primary hotkey in Debug prefs: Left Control (keyCode 59). Keychron K6 bottom-left Control. Not Right Command.
 - Debug prefs domain: `com.FluidApp.app.debug`.
 
 Verified 2026-10-01 in Ghostty: "..., send it." pasted the text, then pressed Enter. Log outcome `insertedAndActionDispatched`.
+
+Send Immediately timing (measured 2026-10-01):
+- First live partial ending in the phrase starts a fixed 1.5 s countdown (`SpokenSendParser.immediateStopSettleNanoseconds`, `ContentView.swift` `handleSpokenSendPartialTranscription`). Then it needs >= 0.35 s quiet and the phrase still at the end, else it cancels and keeps recording.
+- Live partials arrive about every 0.75 s, so phrase detection can lag speech by up to that.
+- Phrase detected to Enter: about 1.7 s (1.55 s countdown, ~80 ms final ASR, ~10 ms paste, ~70 ms to Enter).
+- Same countdown in every app; no per-app logic.
+- Skip the wait: press Left Control right after the phrase (toggle stop, sends at once).
+- Shortening it means patching `immediateStopSettleNanoseconds` and `immediateStopSettleDuration` (overlay bar) in `SpokenSendParser.swift`; `SpokenSendTests.swift` uses them. Not done.
+
+Phrase misses: 1 of 13 "send it" dictations on 2026-10-01 came back as "Sandit". Typed as text, not sent (never armed, so no near-miss match). A longer, rarer phrase (e.g. "over and out", "end message") is the candidate fix; untested.
 
 ## Text insertion
 
@@ -97,11 +108,20 @@ Verified 2026-10-01 in Ghostty: "..., send it." pasted the text, then pressed En
 - Saved hotkey: `PrimaryDictationShortcuts` (JSON data). Left Control = `keyCode 59`.
 - One-off seen 2026-10-01: capture start stalled 2.7 s, then `Direct Core Audio capture failed ... CancellationError` on key release. Next attempt worked. Investigate if it repeats.
 
+## Analytics
+
+- PostHog key is in `Info.plist`; no Debug-build exemption. Batches go to `eu.i.posthog.com`.
+- "Share Detailed Anonymous Analytics" (`ShareAnonymousAnalytics`) is unset, so on by default.
+- Turning it off stops detailed events only; basic activity is still recorded (`AnalyticsService.swift` `writeDetailed` `fallbackActivity`). Stopping all analytics needs the key removed from `Info.plist` in the fork patch. Not done.
+- Automatic Updates is off (`AutoUpdateCheckEnabled = 0`). Keep off: updater checks altic-dev releases, which lack the terminal patch.
+
 ## AI enhancement
 
 OSS Debug has no Fluid Intelligence (`fluid-1`).
 If needed: FluidVoice Debug window, Configure, AI Providers, Groq.
 Do not use Hermes xAI OAuth as the FluidVoice key.
+
+State 2026-10-01: Groq verified, model `openai/gpt-oss-120b`. Dictation cleanup off (`DictationPromptOff = 1`; log `aiMs=-1`). Providers are used only for dictation cleanup, Command Mode, and Rewrite (chat completions); never for transcription. Spoken Send strips the phrase before AI; if AI fails, text is typed but not sent. If cleanup is wanted for prose apps, scope it to "selected apps only" so Ghostty stays raw.
 
 ## Not done
 
