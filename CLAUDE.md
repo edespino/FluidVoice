@@ -36,7 +36,7 @@ The script fetches only `upstream main`. Upstream has branches differing only by
 
 Preview before syncing: `git fetch upstream main && git log --oneline main..upstream/main`. Test the patch rebase without touching branches: `git merge-tree --write-tree --name-only upstream/main local/spoken-send-terminals`.
 
-Upstream `main` ships betas. Sync on 2026-10-01 moved 1.6.10 (build 22) to 1.6.10-beta.7 (build 26), 250 commits.
+Upstream `main` ships betas. Sync on 2026-10-01 moved 1.6.10 (build 22) to 1.6.10-beta.7 (build 26), 250 commits. Sync on 2026-10-30 moved 1.6.10-beta.7 (build 26) to 1.6.13-beta.1 (build 31), 54 commits; patch rebased without conflict.
 
 ## Build and install
 
@@ -50,7 +50,9 @@ ditto "DerivedData/Build/Products/Debug/FluidVoice Debug.app" "/Applications/Flu
 open "/Applications/FluidVoice Debug.app"
 ```
 
-Quit FluidVoice Debug before `ditto` if it is running.
+Quit FluidVoice Debug before `ditto` if it is running: `osascript -e 'tell application "FluidVoice Debug" to quit'`. Wait for the process to exit before `open`; opening while it is still terminating fails with `_LSOpenURLsWithCompletionHandler() failed with error -609`.
+
+Metal Toolchain required. Upstream `87d2655c` (#1206, synced 2026-10-30) added `Sources/Fluid/UI/DictionaryVoiceWave.metal`. Without the toolchain the build fails with `error: cannot execute tool 'metal' due to missing Metal Toolchain`. Install: `xcodebuild -downloadComponent MetalToolchain` (838.9 MB). Installed 2026-10-30: Metal Toolchain 27B47 for Xcode 27.2 (27B52). Check: `xcrun metal --version`.
 
 Unsigned builds are ad-hoc linker-signed. Each rebuild has a new code hash, so macOS privacy grants can drop. Re-grant for FluidVoice Debug (`com.FluidApp.app.debug`), not `com.FluidApp.app`.
 
@@ -61,10 +63,20 @@ Microphone after rebuild (seen 2026-10-01):
   2. Quit and reopen FluidVoice Debug.
   3. Settings, Dictation, Grant Access (or Dashboard, Finish setup, Microphone). Allow.
 - Success in log: `reason=permission_granted`, then `START() completed successfully`.
+- 2026-10-30 (macOS 27.2, 1.6.13-beta.1): after reset and relaunch, no macOS prompt appeared; log showed `reason=permission_granted`. Open the pane directly: `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"`.
 
 Accessibility can also drop. Hotkey events in the log mean the event tap works; delivery failures mean re-grant Accessibility.
+- Missing: `[GlobalHotkeyManager] Accessibility permissions not granted` about every 0.5 s.
+- Granted: `Event tap successfully created and enabled`. On 2026-10-30 this appeared in the running process after the re-grant; no relaunch needed.
+- Open the pane directly (same URL the app uses): `open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"`. On macOS 27.2 the System Settings menu path is not documented here; use the URL.
 
-The `build.log` line `No locator class for device extension 'Xcode.Device.CoreDevice', error: ...` is an Xcode plugin message. Ignore it; check for `** BUILD SUCCEEDED **`.
+Keychain prompt after rebuild (seen 2026-10-30): "FluidVoice Debug wants to use your confidential information stored in "com.fluidvoice.provider-api-keys" in your keychain."
+- Password: the login keychain password (Mac login password). Click Always Allow.
+- Item: login keychain, generic password, service `com.fluidvoice.provider-api-keys`, account `fluidApiKeys`. Holds a JSON map of AI provider API keys (`KeychainService.swift`). Groq key last modified 2026-10-01.
+- The keychain item trusts the binary that created or last allowed it. Each unsigned rebuild has a new code hash, so the prompt returns.
+- Deny: untested. Expected to disable AI providers (Groq) only; dictation cleanup is off.
+
+The `build.log` lines `No locator class for device extension 'Xcode.Device.CoreDevice', error: ...` and `CoreSimulator is out of date ... Simulator device support disabled.` are Xcode messages. Ignore them; check for `** BUILD SUCCEEDED **`.
 
 The main window may open on the left display (DELL U2720Q), behind other windows. Click FluidVoice Debug in the Dock to bring it forward. 1.6.10-beta UI: Dashboard replaces Getting Started; Settings split into pages (Dictation, Shortcuts, ...).
 
@@ -83,6 +95,8 @@ Cask was removed with `brew uninstall --cask fluidvoice`. Restore with `brew ins
 - Debug prefs domain: `com.FluidApp.app.debug`.
 
 Verified 2026-10-01 in Ghostty: "..., send it." pasted the text, then pressed Enter. Log outcome `insertedAndActionDispatched`.
+
+2026-10-30, 1.6.13-beta.1: plain dictation verified (clipboard paste into a terminal text area, `outcome=success`). Spoken Send in Ghostty not yet re-verified on this build.
 
 Send Immediately timing (measured 2026-10-01):
 - First live partial ending in the phrase starts a fixed 1.5 s countdown (`SpokenSendParser.immediateStopSettleNanoseconds`, `ContentView.swift` `handleSpokenSendPartialTranscription`). Then it needs >= 0.35 s quiet and the phrase still at the end, else it cancels and keeps recording.
@@ -107,6 +121,7 @@ Phrase misses: 1 of 13 "send it" dictations on 2026-10-01 came back as "Sandit".
 - Useful greps: `START()`, `mic not authorized`, `FOCUS_ASSESS`, `TYPING_BENCH`, `PIPELINE_SUMMARY`, `Transcription completed`.
 - Saved hotkey: `PrimaryDictationShortcuts` (JSON data). Left Control = `keyCode 59`.
 - One-off seen 2026-10-01: capture start stalled 2.7 s, then `Direct Core Audio capture failed ... CancellationError` on key release. Next attempt worked. Investigate if it repeats.
+- One-off seen 2026-10-30: the running 1.6.10-beta.7 instance logged repeated `Failed to create CGEvent tap`, then `Application will terminate` at 11:51:41, during a build, with no quit sent. Cause unknown.
 
 ## Analytics
 
