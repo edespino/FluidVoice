@@ -90,13 +90,13 @@ Cask was removed with `brew uninstall --cask fluidvoice`. Restore with `brew ins
 - Send Immediately: on (since 2026-10-01). Hotkey mode: toggle (`HotkeyMode = toggle`).
 - With Send Immediately off, the phrase still sends after the hotkey stops recording.
 - Empty phrase does not mean always-Enter.
-- Speech model in Debug prefs: Parakeet TDT v2.
+- Speech model in Debug prefs: Fluid Speech Pro (`SelectedSpeechModel = fluid-parakeet-pro`, English only) since 2026-10-30. Previously Parakeet TDT v2.
 - Primary hotkey in Debug prefs: Left Control (keyCode 59). Keychron K6 bottom-left Control. Not Right Command.
 - Debug prefs domain: `com.FluidApp.app.debug`.
 
 Verified 2026-10-01 in Ghostty: "..., send it." pasted the text, then pressed Enter. Log outcome `insertedAndActionDispatched`.
 
-2026-10-30, 1.6.13-beta.1: plain dictation verified (clipboard paste into a terminal text area, `outcome=success`). Spoken Send in Ghostty not yet re-verified on this build.
+Verified 2026-10-30 on 1.6.13-beta.1 with Fluid Speech Pro, Ghostty: 3 of 3 Spoken Send deliveries `insertedAndActionDispatched` (one raw, two with AI cleanup). `readyToDeliveryMs` (text ready to delivery) was 429-468 ms on every 1.6.13 delivery, raw or Spoken Send. Cause not investigated.
 
 Send Immediately timing (measured 2026-10-01):
 - First live partial ending in the phrase starts a fixed 1.5 s countdown (`SpokenSendParser.immediateStopSettleNanoseconds`, `ContentView.swift` `handleSpokenSendPartialTranscription`). Then it needs >= 0.35 s quiet and the phrase still at the end, else it cancels and keeps recording.
@@ -118,7 +118,8 @@ Phrase misses: 1 of 13 "send it" dictations on 2026-10-01 came back as "Sandit".
 ## Logs
 
 - App log: `~/Library/Logs/Fluid/Fluid.log` (rotates to `Fluid.log.1`).
-- Useful greps: `START()`, `mic not authorized`, `FOCUS_ASSESS`, `TYPING_BENCH`, `PIPELINE_SUMMARY`, `Transcription completed`.
+- Useful greps: `START()`, `mic not authorized`, `FOCUS_ASSESS`, `TYPING_BENCH`, `PIPELINE_SUMMARY`, `Transcription completed`, `DICTATION_SUMMARY` (`aiMs=-1` = no AI), `Dictation AI post-processing finished`, `insertedAndActionDispatched`.
+- Debug `Fluid.log` contains full dictated text (`Transcription completed: '...'`) and, for AI dictations, the prompt, input, model reasoning, and output (`[PromptTrace]`).
 - Saved hotkey: `PrimaryDictationShortcuts` (JSON data). Left Control = `keyCode 59`.
 - One-off seen 2026-10-01: capture start stalled 2.7 s, then `Direct Core Audio capture failed ... CancellationError` on key release. Next attempt worked. Investigate if it repeats.
 - One-off seen 2026-10-30: the running 1.6.10-beta.7 instance logged repeated `Failed to create CGEvent tap`, then `Application will terminate` at 11:51:41, during a build, with no quit sent. Cause unknown.
@@ -137,6 +138,16 @@ If needed: FluidVoice Debug window, Configure, AI Providers, Groq.
 Do not use Hermes xAI OAuth as the FluidVoice key.
 
 State 2026-10-01: Groq verified, model `openai/gpt-oss-120b`. Dictation cleanup off (`DictationPromptOff = 1`; log `aiMs=-1`). Providers are used only for dictation cleanup, Command Mode, and Rewrite (chat completions); never for transcription. Spoken Send strips the phrase before AI; if AI fails, text is typed but not sent. If cleanup is wanted for prose apps, scope it to "selected apps only" so Ghostty stays raw.
+
+1.6.13 sidebar: Configure has Voice Engine, AI Providers, Cleanup Styles (prompts), Custom Dictionary. Built-in providers: OpenAI, Anthropic, xAI, Groq, Cerebras, Google, OpenRouter, Ollama (`localhost:11434`), LM Studio (`localhost:1234`); all called as OpenAI-compatible `/chat/completions` (`AIProvider.swift`, `ModelRepository.swift`).
+
+On-demand AI (set 2026-10-30):
+- Left Control: raw dictation, no AI (`DictationPromptOff = 1`).
+- Left ⌥ + Right ⌃ (log `prompt[__default__]`, keyCode 58, Control flag): dictation with the default cleanup prompt. Per-prompt shortcuts: `SettingsStore.dictationPromptShortcutAssignments`.
+- Secondary Dictation Shortcut (Right ⇧, keyCode 60): off (`PromptModeShortcutEnabled = 0`). Has its own prompt setting (`SecondaryDictationPromptOff`).
+- Verified 2026-10-30: `provider=groq model=openai/gpt-oss-120b`, `aiMs` 496-557, `fallback=false`. Spoken Send still pressed Enter.
+- The default prompt makes minimal edits (spoken punctuation, "new line", "bullet point", digits, named emojis, hesitations). Clean input comes back unchanged. Visible rewrites need a custom prompt in Cleanup Styles.
+- AI time adds to every dictation on that shortcut only. With no provider call, a configured provider costs nothing (connection refresh only before the next request, upstream `ad1d1ff0`).
 
 ## Not done
 
